@@ -19,7 +19,17 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run build
+      - name: Create tag
+        id: tag
+        run: |
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
+          TAG=v${GITHUB_SHA}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          git tag -a $TAG -m "Published version $TAG" ${GITHUB_SHA}
+          git push origin $TAG
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
           files: dist/index.html
+          tag_name: ${{ steps.tag.outputs.tag }}
