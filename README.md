@@ -6,8 +6,25 @@ A simple S3 Directory Listing react app which works without requiring any public
 
 This repository has a GitHub Pages site which can be used as the s3 browser.
 
-1. Create a new IAM user to be used with the browser
-2. Attach the following inline policy to the user:
+1. Update the S3 bucket's CORS policy to be the following:
+```JSON
+[
+    {
+        "AllowedHeaders": [
+            "*"
+        ],
+        "AllowedMethods": [
+            "GET"
+        ],
+        "AllowedOrigins": [
+            "https://cyruscook.github.io"
+        ],
+        "ExposeHeaders": []
+    }
+]
+```
+2. Create a new IAM user to be used with the browser
+3. Attach the following inline policy to the user:
 
 ```JSON
 {
@@ -29,8 +46,8 @@ This repository has a GitHub Pages site which can be used as the s3 browser.
 }
 ```
 
-3. Generate an access key for the user
-4. You can use the following URL as the directory listing, replacing the relevant query parameters (**make sure you URL encode the parameters, paticularly the access key secret**):
+4. Generate an access key for the user
+5. You can use the following URL as the directory listing, replacing the relevant query parameters (**make sure you URL encode the parameters, paticularly the access key secret**):
 
 ```
 https://cyruscook.github.io/s3-dir-listing/?bucket=[S3_BUCKET_NAME]&region=[S3_BUCKET_REGION]&accessKeyId=[IAM_ACCESS_KEY_ID]&secretAccessKey=[IAM_ACCESS_KEY_SECRET]
