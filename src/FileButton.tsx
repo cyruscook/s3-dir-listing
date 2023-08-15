@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import { useErrorBoundary } from "react-error-boundary";
 import ClientContext from "./ClientContext.tsx";
 import {
@@ -8,11 +8,10 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export default function FileButton(props: { bucket: string, name: string }) {
 	const client = useContext(ClientContext);
+	const [url, setUrl] = useState<string | undefined>(undefined);
 	const { showBoundary } = useErrorBoundary();
 
-	function handleClick(e: {preventDefault: () => void}) {
-		e.preventDefault();
-
+	useEffect(() => {
 		if (client === undefined) {
 			return;
 		}
@@ -21,15 +20,23 @@ export default function FileButton(props: { bucket: string, name: string }) {
 			Key: props.name
 		});
 		getSignedUrl(client, command, { expiresIn: 3600 }).then((url) => {
-			window.open(url, "_self")
+			setUrl(url);
 		}).catch((e) => {
 			showBoundary(e);
 		});
-	}
+	}, [client, props.bucket, props.name]);
 
-	return (
-		<a href="#" onClick={handleClick}>
-			{props.name}
-		</a>
-	);
+	if (url !== undefined) {
+		return (
+			<a href={url}>
+				{props.name}
+			</a>
+		);
+	} else {
+		return (
+			<a>
+				{props.name}
+			</a>
+		);
+	}
 }
