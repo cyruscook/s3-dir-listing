@@ -2,6 +2,8 @@
 
 A simple S3 Directory Listing react app which works without requiring any public access by generating pre-signed URLs for any files.
 
+An example listing, for a bucket which has block all public access enabled, can be seen here: https://cyruscook.github.io/s3-dir-listing/?bucket=dirlistingexample&region=eu-west-1&accessKeyId=%41%4b%49%41%32%4c%36%55%49%59%41%34%56%55%43%49%43%4c%4f%50&secretAccessKey=%42%66%79%76%47%4c%64%79%43%36%67%47%70%44%50%44%79%6b%6c%7a%79%6c%75%52%37%56%2b%58%48%61%50%64%62%79%42%66%69%49%53%30
+
 ## Usage
 
 This repository has a GitHub Pages site which can be used as the s3 browser.
