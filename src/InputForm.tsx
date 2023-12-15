@@ -1,4 +1,5 @@
 import { useState, FormEvent } from "react";
+import "./InputForm.css";
 
 
 export default function InputForm(props: { region: string | null, accessKeyId: string | null, secretAccessKey: string | null, bucket: string | null }) {
