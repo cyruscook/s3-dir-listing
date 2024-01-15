@@ -1,26 +1,29 @@
 import { useEffect, useState, useContext } from "react";
 import { useErrorBoundary } from "react-error-boundary";
 import {
+	GetObjectCommand,
+	DeleteObjectCommand,
 	ListObjectsCommand,
 	PutObjectCommand,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import FileItem from "./FileItem.tsx";
+import FileItemSelected from "./FileItemSelected.tsx";
 import ClientContext from "./ClientContext.tsx";
 import RefreshListingContext from "./RefreshListingContext.tsx";
 import "./BucketList.css";
 
-interface FileObject {
-	selected: boolean;
-	key: string;
-}
-
 export default function BucketList(props: { bucket: string }) {
-	const [objects, setObjects] = useState<Array<FileObject>>();
-	//const [selected, setSelected] = useState<Set<string>>(new Set());
+	const [objects, setObjects] = useState<Array<string>>();
+	const [urls, setUrls] = useState<Required<Map<string, string>>>(new Map());
+	const [urlPromises, setUrlPromises] = useState<Required<Map<string, Promise<string>>>>(new Map());
+	const [selected, setSelected] = useState<Required<Set<string>>>(new Set());
+	const [downloading, setDownloading] = useState<Required<Set<string>>>(new Set());
 	const [uploading, setUploading] = useState(false);
 	const client = useContext(ClientContext);
 	const { showBoundary } = useErrorBoundary();
 
+	// Retrieves the list of objects in the S3 bucket
 	function refreshListing() {
 		setObjects(undefined);
 		if (client === undefined) {
@@ -29,17 +32,40 @@ export default function BucketList(props: { bucket: string }) {
 		const command = new ListObjectsCommand({ Bucket: props.bucket });
 		client.send(command).then((response) => {
 			const contents = response.Contents;
+			let newObjects: string[] = [];
 			if (contents) {
-				setObjects(contents.map(file => { return {selected: false, key: file.Key!} }));
-			} else {
-				setObjects([]);
+				newObjects = contents.map(file => file.Key!);
 			}
+			setObjects(newObjects);
+			setUrls(new Map());
+			setSelected(new Set());
+			setDownloading(new Set());
+
+			// Now retrieve URLs for each object
+			const promises = new Map();
+			for (const object of newObjects) {
+				promises.set(object, (async (object) => {
+					try {
+						const command = new GetObjectCommand({
+							Bucket: props.bucket,
+							Key: object
+						});
+						const url = await getSignedUrl(client, command, { expiresIn: 3600 });
+						setUrls(new Map(urls.set(object, url)));
+						return url;
+					} catch (e) {
+						showBoundary(e);
+					}
+				})(object));
+			}
+			setUrlPromises(promises);
 		}).catch((e) => {
 			showBoundary(e);
 		});
 	}
 	useEffect(refreshListing, [props.bucket, client]);
 
+	// Uploads a new item to the S3 bucket
 	async function uploadItems() {
 		if (client === undefined || uploading) {
 			return;
@@ -86,19 +112,94 @@ export default function BucketList(props: { bucket: string }) {
 		return (
 			<>
 				<h3>Bucket '{props.bucket}' is empty</h3>
-				<button>Upload Items</button>
+				<button onClick={uploadItems} disabled={uploading}>Upload Items</button>
 			</>
 		);
 	} else {
-		const numSelected = objects.filter(o => o.selected).length;
-		function toggleAll() {
-			if (!objects) return;
-			const checked = numSelected >= objects.length;
-			setObjects(objects.map(object => {
-				object.selected = !checked;
-				return object;
-			}));
+		function toggleObjectSelected(object: string) {
+			if (selected.delete(object)) {
+				setSelected(new Set(selected));
+			} else {
+				setSelected(new Set(selected.add(object)));
+			}
 		}
+		async function openSelected() {
+			Array.from(selected).forEach(async (object) => {
+				const url = await urlPromises.get(object);
+				window.open(url, '_blank');
+			});
+		}
+		async function downloadObjects(objects: string[]) {
+			if (client === undefined) {
+				return;
+			}
+
+			// Add downloading status to any objects we're downloading - don't download any already being downloaded
+			const nobjects = [];
+			for (const object of objects) {
+				if (!downloading.has(object)) {
+					setDownloading(new Set(downloading.add(object)));
+					nobjects.push(object);
+				}
+			}
+			objects = nobjects;
+
+			const downloads = objects.map(async (object) => {
+				try {
+					const savePromise: Promise<FileSystemFileHandle> = window.showSaveFilePicker({
+						suggestedName: object
+					});
+					try {
+						const data = await client.send(new GetObjectCommand({ Bucket: props.bucket, Key: object }));
+						const bytes = await data.Body.transformToByteArray();
+						console.log("Loaded " + data.ContentLength + " bytes of " + object);
+						const handle = await savePromise;
+						const writable = await handle.createWritable();
+						await writable.write(bytes);
+						await writable.close();
+					} catch (error: any) {
+						console.error(error, error.stack);
+						alert(`Failed to download object: ${error.name}`);
+					}
+					return { name: object, error: null };
+				} catch (error: any) {
+					return { name: object, error: error };
+				}
+			})
+
+			for (const download of downloads) {
+				download.then(({name, error}) => {
+					downloading.delete(name);
+					setDownloading(new Set(downloading));
+					if (error) {
+						console.error(error, error.stack);
+						alert(`Failed to download object '${name}': ${error.name}`);
+					}
+				});
+			}
+		}
+		async function deleteObjects(objects: string[]) {
+			if (client === undefined) {
+				return;
+			}
+	
+			const objstr = "'" + objects.join("', '") + "'";
+			if (window.confirm(`Do you really want to delete '${objstr}'?`)) {
+				const deletions = objects.map(async (object) => {
+					try {
+						await client.send(new DeleteObjectCommand({ Bucket: props.bucket, Key: object }));
+					} catch (error: any) {
+						console.error(error, error.stack);
+						alert(`Failed to delete object: ${error.name}`);
+					}
+				});
+				for (const deletion of deletions) {
+					await deletion;
+					refreshListing();
+				}
+			}
+		}
+
 		return (
 			<RefreshListingContext.Provider value={refreshListing}>
 				<h3>{objects.length} file{objects.length !== 1 ? "s": ""} in bucket '{props.bucket}':</h3>
@@ -120,18 +221,32 @@ export default function BucketList(props: { bucket: string }) {
 							</th>
 						</tr>
 						<tr id="selectedRow">
-							<td><input type="checkbox" name="all_items" checked={numSelected >= objects.length} onChange={toggleAll} /></td>
-							<td data-active={numSelected > 0}>Selected ({numSelected})</td>
-							<td>&#128065;</td>
-							<td>&#128427;</td>
-							<td>&#10060;</td>
+							<FileItemSelected
+								objects={objects}
+								selected={selected}
+								bucket={props.bucket}
+								open={openSelected}
+								setSelected={(selected: Set<string>) => setSelected(selected)}
+								downloading={Array.from(selected).filter(o => !downloading.has(o)).length <= 0}
+								download={() => downloadObjects(Array.from(selected))}
+								delete={() => deleteObjects(Array.from(selected))}
+							/>
 						</tr>
 					</thead>
 					<tbody>
 						{objects.map((o) => {
 							return (
-								<tr key={o.key}>
-									<FileItem selected={o.selected} bucket={props.bucket} name={o.key} toggleSelected={() => { o.selected = !o.selected; setObjects([...objects]) }} />
+								<tr key={o}>
+									<FileItem
+										selected={selected.has(o)}
+										bucket={props.bucket}
+										name={o}
+										url={urls.get(o)}
+										toggleSelected={() => toggleObjectSelected(o)}
+										downloading={downloading.has(o)}
+										download={() => downloadObjects([o])}
+										delete={() => deleteObjects([o])}
+									/>
 								</tr>
 							);
 						})}

@@ -16,7 +16,10 @@ This repository has a GitHub Pages site which can be used as the s3 browser.
             "*"
         ],
         "AllowedMethods": [
-            "GET"
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
         ],
         "AllowedOrigins": [
             "https://cyruscook.github.io"
@@ -26,7 +29,7 @@ This repository has a GitHub Pages site which can be used as the s3 browser.
 ]
 ```
 2. Create a new IAM user to be used with the browser
-3. Attach the following inline policy to the user:
+3. Attach the following inline policy to the user (remembering to replace the `[S3_BUCKET_NAME]`), you can remove the delete and put actions if you do not want to allow this:
 
 ```JSON
 {
@@ -37,7 +40,9 @@ This repository has a GitHub Pages site which can be used as the s3 browser.
             "Effect": "Allow",
             "Action": [
                 "s3:GetObject",
-                "s3:ListBucket"
+                "s3:ListBucket",
+                "s3:DeleteObject",
+                "s3:PutObject"
             ],
             "Resource": [
                 "arn:aws:s3:::[S3_BUCKET_NAME]",
@@ -49,11 +54,6 @@ This repository has a GitHub Pages site which can be used as the s3 browser.
 ```
 
 4. Generate an access key for the user
-5. You can use the following URL as the directory listing, replacing the relevant query parameters (**make sure you URL encode the parameters, paticularly the access key secret**):
+5. Go to [https://cyruscook.github.io/](https://cyruscook.github.io/), enter the access key credentials and the bucket name into the form and it will direct you to a URL you can share
 
-```
-https://cyruscook.github.io/s3-dir-listing/?bucket=[S3_BUCKET_NAME]&region=[S3_BUCKET_REGION]&accessKeyId=[IAM_ACCESS_KEY_ID]&secretAccessKey=[IAM_ACCESS_KEY_SECRET]
-```
-
-Alternatively, you can also host the website yourself.
-The latest index.html can be downloaded by going to Actions, selecting the latest action, and downloading `index.html` from the Artifacts list.
+Alternatively, you can also host the website yourself, check `.github/workflows/build.yml` to see how to build the website.
