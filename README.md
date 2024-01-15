@@ -54,6 +54,6 @@ This repository has a GitHub Pages site which can be used as the s3 browser.
 ```
 
 4. Generate an access key for the user
-5. Go to [https://cyruscook.github.io/](https://cyruscook.github.io/), enter the access key credentials and the bucket name into the form and it will direct you to a URL you can share
+5. Go to [https://cyruscook.github.io/s3-dir-listing](https://cyruscook.github.io/s3-dir-listing), enter the access key credentials and the bucket name into the form and it will direct you to a URL you can share
 
 Alternatively, you can also host the website yourself, check `.github/workflows/build.yml` to see how to build the website.
