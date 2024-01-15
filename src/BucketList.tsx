@@ -13,7 +13,7 @@ import ClientContext from "./ClientContext.tsx";
 import RefreshListingContext from "./RefreshListingContext.tsx";
 import "./BucketList.css";
 
-export default function BucketList(props: { bucket: string }) {
+export default function BucketList(props: { bucket: string, readonly: boolean }) {
 	const [objects, setObjects] = useState<Array<string>>();
 	const [urls, setUrls] = useState<Required<Map<string, string>>>(new Map());
 	const [urlPromises, setUrlPromises] = useState<Required<Map<string, Promise<string>>>>(new Map());
@@ -112,7 +112,7 @@ export default function BucketList(props: { bucket: string }) {
 		return (
 			<>
 				<h3>Bucket '{props.bucket}' is empty</h3>
-				<button onClick={uploadItems} disabled={uploading}>Upload Items</button>
+				{props.readonly ? <></> : <button onClick={uploadItems} disabled={uploading}>Upload Items</button>}
 			</>
 		);
 	} else {
@@ -216,9 +216,9 @@ export default function BucketList(props: { bucket: string }) {
 							<th>
 								Download
 							</th>
-							<th>
+							{props.readonly ? <></> : <th>
 								Delete
-							</th>
+							</th>}
 						</tr>
 						<tr id="selectedRow">
 							<FileItemSelected
@@ -230,6 +230,7 @@ export default function BucketList(props: { bucket: string }) {
 								downloading={Array.from(selected).filter(o => !downloading.has(o)).length <= 0}
 								download={() => downloadObjects(Array.from(selected))}
 								delete={() => deleteObjects(Array.from(selected))}
+								readonly={props.readonly}
 							/>
 						</tr>
 					</thead>
@@ -246,13 +247,14 @@ export default function BucketList(props: { bucket: string }) {
 										downloading={downloading.has(o)}
 										download={() => downloadObjects([o])}
 										delete={() => deleteObjects([o])}
+										readonly={props.readonly}
 									/>
 								</tr>
 							);
 						})}
 					</tbody>
 				</table>
-				<button onClick={uploadItems} disabled={uploading}>Upload Items</button>
+				{props.readonly ? <></> : <button onClick={uploadItems} disabled={uploading}>Upload Items</button>}
 			</RefreshListingContext.Provider>
 		);
 	}

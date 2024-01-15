@@ -21,6 +21,7 @@ export default function App() {
 	const accessKeyId = queryParameters.get("accessKeyId");
 	const secretAccessKey = queryParameters.get("secretAccessKey");
 	const bucket = queryParameters.get("bucket");
+	const readonly = queryParameters.has("readonly");
 
 	if (region === null || accessKeyId === null || secretAccessKey === null || bucket === null) {
 		return (
@@ -44,7 +45,7 @@ export default function App() {
 		<ClientContext.Provider value={client}>
 			<ErrorBoundary fallbackRender={fallbackRender}>
 				<div className="App">
-					<BucketList bucket={bucket} />
+					<BucketList bucket={bucket} readonly={readonly} />
 				</div>
 			</ErrorBoundary>
 		</ClientContext.Provider>
