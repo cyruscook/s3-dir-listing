@@ -5,8 +5,10 @@ import {
 	DeleteObjectCommand,
 	ListObjectsCommand,
 	PutObjectCommand,
+	S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import JSZip from "jszip";
 import FileItem from "./FileItem.tsx";
 import FileItemSelected from "./FileItemSelected.tsx";
 import ClientContext from "./ClientContext.tsx";
@@ -144,15 +146,45 @@ export default function BucketList(props: { bucket: string, readonly: boolean })
 			}
 			objects = nobjects;
 
-			const downloads = objects.map(async (object) => {
+			async function getObjectBytes(client: S3Client, bucket: string, object: string) {
+				const data = await client.send(new GetObjectCommand({ Bucket: bucket, Key: object }));
+				const bytes = await data.Body.transformToByteArray();
+				console.log("Loaded " + data.ContentLength + " bytes of " + object);
+				return bytes;
+			}
+
+			if (objects.length > 1) {
+				// Multiple objects - download as zip
+				const savePromise: Promise<FileSystemFileHandle> = window.showSaveFilePicker({
+					suggestedName: props.bucket + ".zip"
+				});
+				const zip = new JSZip();
+				const promises = objects.map((object) => {
+					return getObjectBytes(client, props.bucket, object)
+						.then((bytes) => {
+							zip.file(object, bytes);
+						})
+						.catch((e) => {
+							showBoundary(e);
+						});
+				});
+				const handle = await savePromise;
+				for (const promise of promises) {
+					await promise;
+				}
+				const blob = await zip.generateAsync({type:"blob"});
+				const writable = await handle.createWritable();
+				await writable.write(blob);
+				await writable.close();
+			} else {
+				// One object - just download it
+				const object = objects.pop()!;
 				try {
 					const savePromise: Promise<FileSystemFileHandle> = window.showSaveFilePicker({
 						suggestedName: object
 					});
 					try {
-						const data = await client.send(new GetObjectCommand({ Bucket: props.bucket, Key: object }));
-						const bytes = await data.Body.transformToByteArray();
-						console.log("Loaded " + data.ContentLength + " bytes of " + object);
+						const bytes = await getObjectBytes(client, props.bucket, object);
 						const handle = await savePromise;
 						const writable = await handle.createWritable();
 						await writable.write(bytes);
@@ -161,23 +193,15 @@ export default function BucketList(props: { bucket: string, readonly: boolean })
 						console.error(error, error.stack);
 						alert(`Failed to download object: ${error.name}`);
 					}
-					return { name: object, error: null };
-				} catch (error: any) {
-					return { name: object, error: error };
-				}
-			})
-
-			for (const download of downloads) {
-				download.then(({name, error}) => {
-					downloading.delete(name);
+					downloading.delete(object);
 					setDownloading(new Set(downloading));
-					if (error) {
-						console.error(error, error.stack);
-						alert(`Failed to download object '${name}': ${error.name}`);
-					}
-				});
+				} catch (error: any) {
+					console.error(error, error.stack);
+					alert(`Failed to download object '${object}': ${error.name}`);
+				}
 			}
 		}
+
 		async function deleteObjects(objects: string[]) {
 			if (client === undefined) {
 				return;
