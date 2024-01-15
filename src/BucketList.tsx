@@ -176,6 +176,8 @@ export default function BucketList(props: { bucket: string, readonly: boolean })
 				const writable = await handle.createWritable();
 				await writable.write(blob);
 				await writable.close();
+				objects.forEach(downloading.delete, downloading);
+				setDownloading(new Set(downloading));
 			} else {
 				// One object - just download it
 				const object = objects.pop()!;
