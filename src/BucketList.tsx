@@ -154,28 +154,33 @@ export default function BucketList(props: { bucket: string, readonly: boolean })
 			}
 
 			if (objects.length > 1) {
-				// Multiple objects - download as zip
-				const savePromise: Promise<FileSystemFileHandle> = window.showSaveFilePicker({
-					suggestedName: props.bucket + ".zip"
-				});
-				const zip = new JSZip();
-				const promises = objects.map((object) => {
-					return getObjectBytes(client, props.bucket, object)
-						.then((bytes) => {
-							zip.file(object, bytes);
-						})
-						.catch((e) => {
-							showBoundary(e);
-						});
-				});
-				const handle = await savePromise;
-				for (const promise of promises) {
-					await promise;
+				try {
+					// Multiple objects - download as zip
+					const savePromise: Promise<FileSystemFileHandle> = window.showSaveFilePicker({
+						suggestedName: props.bucket + ".zip"
+					});
+					const zip = new JSZip();
+					const promises = objects.map((object) => {
+						return getObjectBytes(client, props.bucket, object)
+							.then((bytes) => {
+								zip.file(object, bytes);
+							})
+							.catch((e) => {
+								showBoundary(e);
+							});
+					});
+					const handle = await savePromise;
+					for (const promise of promises) {
+						await promise;
+					}
+					const blob = await zip.generateAsync({type:"blob"});
+					const writable = await handle.createWritable();
+					await writable.write(blob);
+					await writable.close();
+				} catch (error: any) {
+					console.error(error, error.stack);
+					alert(`Failed to download objects: ${error.name}`);
 				}
-				const blob = await zip.generateAsync({type:"blob"});
-				const writable = await handle.createWritable();
-				await writable.write(blob);
-				await writable.close();
 				objects.forEach(downloading.delete, downloading);
 				setDownloading(new Set(downloading));
 			} else {
@@ -195,12 +200,12 @@ export default function BucketList(props: { bucket: string, readonly: boolean })
 						console.error(error, error.stack);
 						alert(`Failed to download object: ${error.name}`);
 					}
-					downloading.delete(object);
-					setDownloading(new Set(downloading));
 				} catch (error: any) {
 					console.error(error, error.stack);
 					alert(`Failed to download object '${object}': ${error.name}`);
 				}
+				downloading.delete(object);
+				setDownloading(new Set(downloading));
 			}
 		}
 
