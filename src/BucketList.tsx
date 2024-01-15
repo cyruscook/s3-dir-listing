@@ -2,7 +2,6 @@ import { useEffect, useState, useContext } from "react";
 import { useErrorBoundary } from "react-error-boundary";
 import {
 	ListObjectsCommand,
-	ListObjectsCommandOutput,
 	PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import FileItem from "./FileItem.tsx";
@@ -10,24 +9,31 @@ import ClientContext from "./ClientContext.tsx";
 import RefreshListingContext from "./RefreshListingContext.tsx";
 import "./BucketList.css";
 
+interface FileObject {
+	selected: boolean;
+	key: string;
+}
 
 export default function BucketList(props: { bucket: string }) {
-	const [objects, setObjects] = useState<
-		Required<ListObjectsCommandOutput>["Contents"] | undefined
-	>(undefined);
-	const [selected, setSelected] = useState<Array<string>>([]);
+	const [objects, setObjects] = useState<Array<FileObject>>();
+	//const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [uploading, setUploading] = useState(false);
 	const client = useContext(ClientContext);
 	const { showBoundary } = useErrorBoundary();
 
 	function refreshListing() {
-		setObjects([]);
+		setObjects(undefined);
 		if (client === undefined) {
 			return;
 		}
 		const command = new ListObjectsCommand({ Bucket: props.bucket });
 		client.send(command).then((response) => {
-			setObjects(response.Contents || []);
+			const contents = response.Contents;
+			if (contents) {
+				setObjects(contents.map(file => { return {selected: false, key: file.Key!} }));
+			} else {
+				setObjects([]);
+			}
 		}).catch((e) => {
 			showBoundary(e);
 		});
@@ -84,7 +90,15 @@ export default function BucketList(props: { bucket: string }) {
 			</>
 		);
 	} else {
-		const numSelected = selected.length;
+		const numSelected = objects.filter(o => o.selected).length;
+		function toggleAll() {
+			if (!objects) return;
+			const checked = numSelected >= objects.length;
+			setObjects(objects.map(object => {
+				object.selected = !checked;
+				return object;
+			}));
+		}
 		return (
 			<RefreshListingContext.Provider value={refreshListing}>
 				<h3>{objects.length} file{objects.length !== 1 ? "s": ""} in bucket '{props.bucket}':</h3>
@@ -106,7 +120,7 @@ export default function BucketList(props: { bucket: string }) {
 							</th>
 						</tr>
 						<tr id="selectedRow">
-							<td><input type="checkbox" name="all_items" /></td>
+							<td><input type="checkbox" name="all_items" checked={numSelected >= objects.length} onChange={toggleAll} /></td>
 							<td data-active={numSelected > 0}>Selected ({numSelected})</td>
 							<td>&#128065;</td>
 							<td>&#128427;</td>
@@ -116,8 +130,8 @@ export default function BucketList(props: { bucket: string }) {
 					<tbody>
 						{objects.map((o) => {
 							return (
-								<tr key={o.Key!}>
-									<FileItem bucket={props.bucket} name={o.Key!} />
+								<tr key={o.key}>
+									<FileItem selected={o.selected} bucket={props.bucket} name={o.key} toggleSelected={() => { o.selected = !o.selected; setObjects([...objects]) }} />
 								</tr>
 							);
 						})}

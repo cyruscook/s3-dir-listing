@@ -7,7 +7,7 @@ import RefreshListingContext from "./RefreshListingContext.tsx";
 import "./FileItem.css";
 
 
-export default function FileItem(props: { bucket: string, name: string }) {
+export default function FileItem(props: { selected: boolean, bucket: string, name: string, toggleSelected: () => void }) {
 	const client = useContext(ClientContext);
 	const refreshListing = useContext(RefreshListingContext);
 	const [url, setUrl] = useState<string | undefined>(undefined);
@@ -71,7 +71,7 @@ export default function FileItem(props: { bucket: string, name: string }) {
 
 	return (
 		<>
-			<td><input type="checkbox" name="vehicle1" /></td>
+			<td><input type="checkbox" onChange={props.toggleSelected} checked={props.selected} /></td>
 			<td>
 				{props.name}
 			</td>
