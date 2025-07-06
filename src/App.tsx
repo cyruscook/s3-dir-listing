@@ -1,9 +1,7 @@
 import { ErrorBoundary } from "react-error-boundary";
-import { S3Client } from "@aws-sdk/client-s3";
-import ClientContext from "./ClientContext.tsx";
-import BucketList from "./BucketList.tsx";
 import InputForm from "./InputForm.tsx";
 import "./App.css";
+import AmplifyBucketList from "./AmplifyBucketList.tsx";
 
 export default function App() {
 	function fallbackRender(props: { error: { message: string } }) {
@@ -33,21 +31,11 @@ export default function App() {
 		);
 	}
 
-	const client = new S3Client({
-		region: region,
-		credentials: {
-			accessKeyId: accessKeyId,
-			secretAccessKey: secretAccessKey,
-		},
-	});
-
 	return (
-		<ClientContext.Provider value={client}>
-			<ErrorBoundary fallbackRender={fallbackRender}>
-				<div className="App">
-					<BucketList bucket={bucket} readonly={readonly} />
-				</div>
-			</ErrorBoundary>
-		</ClientContext.Provider>
+		<ErrorBoundary fallbackRender={fallbackRender}>
+			<div className="App">
+				<AmplifyBucketList bucket={bucket} readonly={readonly} region={region} accessKeyId={accessKeyId} secretAccessKey={secretAccessKey} />
+			</div>
+		</ErrorBoundary>
 	);
 }

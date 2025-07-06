@@ -1,6 +1,6 @@
 {
   "name": "s3-dir-listing",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "",
   "type": "module",
   "scripts": {
@@ -10,16 +10,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aws-amplify/ui-react": "^6.11.2",
+    "@aws-amplify/ui-react-storage": "^3.11.0",
     "@aws-sdk/client-s3": "^3.385.0",
+    "@aws-sdk/client-sts": "^3.840.0",
     "@aws-sdk/s3-request-presigner": "^3.385.0",
+    "aws-amplify": "^6.15.3",
     "jszip": "^3.10.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "react-error-boundary": "^4.0.10"
   },
   "devDependencies": {
-    "@types/react": "^18.2.18",
-    "@types/react-dom": "^18.2.7",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
     "@types/wicg-file-system-access": "^2023.10.4",
     "@typescript-eslint/eslint-plugin": "^6.2.1",
     "@typescript-eslint/parser": "^6.2.1",

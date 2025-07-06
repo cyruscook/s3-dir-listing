@@ -17,14 +17,28 @@ This repository has a GitHub Pages site which can be used as the s3 browser.
         ],
         "AllowedMethods": [
             "GET",
-            "POST",
+            "HEAD",
             "PUT",
+            "POST",
             "DELETE"
         ],
         "AllowedOrigins": [
             "https://cyruscook.github.io"
         ],
-        "ExposeHeaders": []
+        "ExposeHeaders": [
+            "last-modified",
+            "content-type",
+            "content-length",
+            "etag",
+            "x-amz-version-id",
+            "x-amz-request-id",
+            "x-amz-id-2",
+            "x-amz-cf-id",
+            "x-amz-storage-class",
+            "date",
+            "access-control-expose-headers"
+        ],
+        "MaxAgeSeconds": 3000
     }
 ]
 ```
